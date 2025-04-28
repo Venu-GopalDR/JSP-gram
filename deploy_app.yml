@@ -1,0 +1,38 @@
+---
+- name: deploy web application to apache tomcat
+  hosts: dev
+  become: yes
+
+  vars:
+    tomcat_service: tomcat
+    jar_file_path: /root/myapp/target/myapp.jar
+    tomcat_install_dir: /opt/tomcat
+    tomcat_version: 9.0.104
+  tasks:
+   - name: Install java
+     yum:
+       name: java-11-openjdk
+       state: present
+   - name: Download and Extract tomcat
+     unarchive:
+       src: "https://dlcdn.apache.org/tomcat/tomcat-10/v10.1.40/bin/apache-tomcat-10.1.40.tar.gz"
+       dest: /opt/
+       remote_src: yes
+
+   - name: rename extracted tomcat folder
+     command: mv /opt/apache-tomcat-10.1.40 {{tomcat_install_dir}}
+     args:
+       creates: "{{tomcat_install_dir}}"
+
+   - name: copy war file to tomcat webapps directory
+     copy: 
+       src: "{{jar_file_path}}"
+       dest: "{{tomcat_install_dir}}/webapps/"
+
+   - name: restart tomcat
+     shell: |
+       {{ tomcat_install_dir }}/bin/shutdown.sh || true
+       sleep 5
+       {{ tomcat_install_dir }}/bin/startup.sh
+     args:
+       executable: /bin/bash
